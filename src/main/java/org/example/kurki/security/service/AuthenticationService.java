@@ -7,6 +7,7 @@ import org.example.kurki.security.api.dto.LoginUserDto;
 import org.example.kurki.security.api.dto.RegisterUserDto;
 import org.example.kurki.security.api.dto.ResetPasswordDTO;
 import org.example.kurki.security.api.dto.VerifyUserDto;
+import org.example.kurki.security.api.mapper.UserMapper;
 import org.example.kurki.security.exception.UserNotFoundException;
 import org.example.kurki.security.model.User;
 import org.example.kurki.security.repository.UserRepository;
@@ -28,11 +29,13 @@ public class AuthenticationService {
     private final AuthenticationManager authenticationManager;
     private final SecureRandom secureRandom = new SecureRandom();
     private final EmailService emailService;
+    private final UserMapper userMapper;
 
 
 
     public User signup(RegisterUserDto input){
-        User user = new User(input.getUsername(), input.getEmail(), passwordEncoder.encode(input.getPassword()));
+        User user = userMapper.toEntity(input);
+        user.setPassword(passwordEncoder.encode(input.getPassword()));
         user.setDateOfBirth(input.getDateOfBirth());
         user.setPhoneNumber(input.getPhoneNumber());
         user.setVerificationCode(generateVerificationCode());

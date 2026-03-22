@@ -1,10 +1,9 @@
 package org.example.kurki.security.model;
 
-import lombok.Getter;
-import lombok.Setter;
+import lombok.Data;
 
-@Getter
-@Setter
+
+@Data
 public class LoginResponse {
     private String token;
     private long expiresIn;
