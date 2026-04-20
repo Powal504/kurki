@@ -11,12 +11,4 @@ import org.mapstruct.Mapper;
 public interface UserMapper {
 
     User toEntity(RegisterUserDto dto);
-
-    RegisterUserDto toRegisterDto(User user);
-
-    LoginUserDto toLoginDto(User user);
-
-    VerifyUserDto toVerifyDto(User user);
-
-    ResetPasswordDTO toResetPasswordDto(User user);
 }
