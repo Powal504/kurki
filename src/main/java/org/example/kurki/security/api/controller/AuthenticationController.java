@@ -1,6 +1,7 @@
 package org.example.kurki.security.api.controller;
 
 
+import jakarta.validation.Valid;
 import org.example.kurki.security.api.dto.*;
 import org.example.kurki.security.model.LoginResponse;
 import org.example.kurki.security.model.User;
@@ -23,7 +24,7 @@ public class AuthenticationController {
     }
 
     @PostMapping("/signup")
-    public ResponseEntity<User> register(@RequestBody RegisterUserDto registerUserDto) {
+    public ResponseEntity<User> register(@Valid @RequestBody RegisterUserDto registerUserDto) {
         User registeredUser = authenticationService.signup(registerUserDto);
         return ResponseEntity.ok(registeredUser);
     }

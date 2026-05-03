@@ -36,7 +36,6 @@ public class Post {
     @Column(name = "text")
     private String text;
 
-    @Size(max = 255)
     @Column(name = "creation_date")
     private LocalDate creationDate;
 

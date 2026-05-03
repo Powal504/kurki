@@ -7,7 +7,6 @@ import java.util.Set;
 
 @Data
 public class PostDetailsDto {
-    private Integer id;
     private String title;
     private String text;
     private LocalDate creationDate;
