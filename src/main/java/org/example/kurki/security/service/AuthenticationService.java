@@ -50,7 +50,7 @@ public class AuthenticationService {
     }
 
     public User authenticate(LoginUserDto input){
-        User user = userRepository.findByEmail(input.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(input.getEmail())
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if(!user.isEnabled()){
@@ -66,7 +66,7 @@ public class AuthenticationService {
     }
 
     public void verifyUser(VerifyUserDto input) {
-        Optional<User> optionalUser = userRepository.findByEmail(input.getEmail());
+        Optional<User> optionalUser = userRepository.findByEmailIgnoreCase(input.getEmail());
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
             if (user.getVerificationCodeExpiresAt().isBefore(LocalDateTime.now())) {
@@ -86,7 +86,7 @@ public class AuthenticationService {
     }
 
     public void resendVerificationCode(String email) {
-        Optional<User> optionalUser = userRepository.findByEmail(email);
+        Optional<User> optionalUser = userRepository.findByEmailIgnoreCase(email);
         if (optionalUser.isPresent()) {
             User user = optionalUser.get();
             if(user.isEnabled()){
@@ -126,7 +126,7 @@ public class AuthenticationService {
     }
 
     public void forgotPassword(ForgotPasswordDTO input) {
-        User user = userRepository.findByEmail(input.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(input.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         user.setResetPasswordCode(generateVerificationCode());
@@ -137,7 +137,7 @@ public class AuthenticationService {
     }
 
     public void resetPassword(ResetPasswordDTO input) {
-        User user = userRepository.findByEmail(input.getEmail())
+        User user = userRepository.findByEmailIgnoreCase(input.getEmail())
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         if (user.getResetPasswordExpiresAt() == null ||
