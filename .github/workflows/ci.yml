@@ -69,5 +69,15 @@ jobs:
       - name: Budowanie i wysyłanie obrazu Docker
         run: |
           docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:latest .
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend --all-tags     
-                
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend --all-tags
+      - name: Logowanie do Azure za pomocą CLI
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Aktualizacja Azure Container App nowym obrazem
+        run: |
+          az containerapp update \
+              --name kurki-backend-app \
+              --resource-group kurki-rg \
+              --image ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:${{ github.sha }}           
