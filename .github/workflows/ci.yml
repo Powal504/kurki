@@ -35,6 +35,9 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
           cache: maven
+      
+      - name: Nadanie uprawnień dla Maven Wrapper
+        run: chmod +x mvnw
 
       - name: Uruchomienie testów Mavenem
         run: ./mvnw test -B
