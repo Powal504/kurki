@@ -58,3 +58,16 @@ jobs:
           git revert --no-edit HEAD 
           
           git push origin main
+
+      - name: Logowanie do Azure Container Registry
+        uses: azure/docker-login@v1
+        with:
+          login-server: ${{ secrets.ACR_LOGIN_SERVER }}
+          username: ${{ secrets.ACR_USERNAME }}
+          password: ${{ secrets.ACR_PASSWORD }}
+
+      - name: Budowanie i wysyłanie obrazu Docker
+        run: |
+          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:latest .
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend --all-tags     
+                
