@@ -7,6 +7,6 @@ import lombok.Data;
 @Data
 public class ChatRequestDto {
     @NotBlank
-    @Size(max = 1000)
+    @Size(max = 2000)
     private String message;
 }
