@@ -61,4 +61,30 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("error", "Server error", "message", ex.getMessage()));
     }
+
+    @ExceptionHandler(DatabaseUnavailableException.class)
+    public ResponseEntity<?> handleDatabaseUnavailable(DatabaseUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 503,
+                        "error", "Database unavailable",
+                        "message", "Usługa jest chwilowo niedostępna. Problem z połączeniem z bazą danych. Spróbuj ponownie za chwilę.",
+                        "code", "DATABASE_DISCONNECTED"
+                )
+        );
+    }
+
+    @ExceptionHandler(ChatbotUnavailableException.class)
+    public ResponseEntity<?> handleChatbotUnavailable(ChatbotUnavailableException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 503,
+                        "error", "Chatbot unavailable",
+                        "message", "Chatbot jest chwilowo niedostępny. Nie martw się — Twoje konto i dane są bezpieczne. Spróbuj ponownie za chwilę.",
+                        "code", "CHATBOT_UNAVAILABLE"
+                )
+        );
+    }
 }

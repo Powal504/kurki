@@ -2,6 +2,7 @@ package org.example.kurki.ai.service;
 
 
 import lombok.RequiredArgsConstructor;
+import org.example.kurki.security.exception.ChatbotUnavailableException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -121,8 +122,7 @@ public class ChatbotService {
             return firstPart.get("text").toString();
 
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException("Chatbot service is temporarily unavailable");
+            throw new ChatbotUnavailableException("Gemini API is temporarily unavailable", e);
         }
     }
 }
