@@ -1,7 +1,5 @@
 package org.example.kurki.security.model;
 
-
-
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -50,21 +48,27 @@ public class User implements UserDetails {
 
     private boolean enabled;
 
+    @JsonIgnore
     @Column(name = "verification_code")
     private String verificationCode;
 
+    @JsonIgnore
     @Column(name = "verification_expiration")
     private LocalDateTime verificationCodeExpiresAt;
 
+    @JsonIgnore
     @Column(name = "reset_password_code")
     private String resetPasswordCode;
 
+    @JsonIgnore
     @Column(name = "reset_password_expiration")
     private LocalDateTime resetPasswordExpiresAt;
 
+    @Column(name = "is_banned", nullable = false)
+    private boolean banned = false;
+
     @Column(nullable = false)
     private String role = "ROLE_USER";
-
 
     public User(String name, String email, String password) {
         this.name = name;
@@ -92,7 +96,7 @@ public class User implements UserDetails {
 
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return !banned;
     }
 
     @Override

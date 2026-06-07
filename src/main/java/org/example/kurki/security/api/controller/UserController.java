@@ -1,35 +1,66 @@
 package org.example.kurki.security.api.controller;
 
-
-import org.example.kurki.security.model.User;
+import lombok.RequiredArgsConstructor;
+import org.example.kurki.security.api.dto.UserResponseDto;
 import org.example.kurki.security.service.UserService;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
 @RequestMapping("/users")
 @RestController
+@RequiredArgsConstructor
 public class UserController {
+
     private final UserService userService;
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
 
     @GetMapping("/me")
-    public ResponseEntity<User> authenticatedUser() {
-        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
-        User currentUser = (User) authentication.getPrincipal();
-        return ResponseEntity.ok(currentUser);
+    @PreAuthorize(
+            "hasAnyRole('USER', 'MODERATOR', 'ADMIN')")
+    public ResponseEntity<UserResponseDto> authenticatedUser() {
+
+        return ResponseEntity.ok(
+                userService.getCurrentUser());
     }
 
-    @GetMapping("/")
-    public ResponseEntity<List<User>> allUsers() {
-        List <User> users = userService.allUsers();
-        return ResponseEntity.ok(users);
+    @GetMapping
+    @PreAuthorize(
+            "hasAnyRole('MODERATOR', 'ADMIN')")
+    public ResponseEntity<List<UserResponseDto>> allUsers() {
+
+        return ResponseEntity.ok(
+                userService.allUsers());
+    }
+
+    @DeleteMapping("/me")
+    @PreAuthorize(
+            "hasAnyRole('USER', 'MODERATOR', 'ADMIN')")
+    public ResponseEntity<Void> deleteOwnAccount() {
+
+        userService.deleteOwnAccount();
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @PatchMapping("/{id}/ban")
+    @PreAuthorize("hasRole('MODERATOR')")
+    public ResponseEntity<Void> banUser(
+            @PathVariable Long id) {
+
+        userService.banUser(id);
+
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteUser(
+            @PathVariable Long id) {
+
+        userService.deleteUserByAdmin(id);
+
+        return ResponseEntity.noContent().build();
     }
 }
