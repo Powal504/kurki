@@ -83,7 +83,7 @@ public class GlobalExceptionHandler {
                 Map.of(
                         "timestamp", LocalDateTime.now(),
                         "status", 400,
-                        "error", "Usługa jest chwilowo niedostępna. Problem z połączeniem z bazą danych. Spróbuj ponownie za chwilę",
+                        "error", "Bad request",
                         "message", ex.getMessage()
                 )
         );
