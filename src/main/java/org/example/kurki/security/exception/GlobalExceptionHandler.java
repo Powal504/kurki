@@ -69,6 +69,12 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntime(RuntimeException ex) {
 
+        String message = ex.getMessage();
+
+        if (message != null && message.contains("Could not open JPA EntityManager for transaction")) {
+            return databaseUnavailableResponse();
+        }
+
         if (isDatabaseException(ex)) {
             return databaseUnavailableResponse();
         }
