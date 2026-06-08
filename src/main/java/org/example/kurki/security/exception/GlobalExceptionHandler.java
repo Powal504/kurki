@@ -29,10 +29,10 @@ public class GlobalExceptionHandler {
     @ExceptionHandler({AccessDeniedException.class, AuthorizationDeniedException.class})
     public ResponseEntity<Object> handleAccessDeniedException(Exception ex) {
         Map<String, Object> body = new HashMap<>();
-        body.put("status", HttpStatus.FORBIDDEN.value());
         body.put("timestamp", LocalDateTime.now().toString());
-        body.put("message", ex.getMessage());
+        body.put("status", HttpStatus.FORBIDDEN.value());
         body.put("error", "Forbidden");
+        body.put("message", ex.getMessage());
 
         return new ResponseEntity<>(body, HttpStatus.FORBIDDEN);
     }
@@ -59,22 +59,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<Map<String, Object>> handlePredictionException(PredictionException ex) {
         ex.printStackTrace();
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                Map.of(
                         "error", "Prediction failed",
                         "message", ex.getMessage()
-                ));
+                )
+        );
     }
 
     @ExceptionHandler(RuntimeException.class)
     public ResponseEntity<?> handleRuntime(RuntimeException ex) {
-
-        String message = ex.getMessage();
-
-        if (message != null && message.contains("Could not open JPA EntityManager for transaction")) {
-            return databaseUnavailableResponse();
-        }
-
         if (isDatabaseException(ex)) {
             return databaseUnavailableResponse();
         }
@@ -90,26 +84,21 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<Map<String, Object>> handleAll(Exception ex) {
+    public ResponseEntity<?> handleAll(Exception ex) {
         ex.printStackTrace();
 
         if (isDatabaseException(ex)) {
-            return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
-                    Map.of(
-                            "timestamp", LocalDateTime.now(),
-                            "status", 503,
-                            "error", "Database unavailable",
-                            "message", "Usługa jest chwilowo niedostępna. Problem z połączeniem z bazą danych. Spróbuj ponownie za chwilę.",
-                            "code", "DATABASE_DISCONNECTED"
-                    )
-            );
+            return databaseUnavailableResponse();
         }
 
-        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body(Map.of(
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
+                Map.of(
+                        "timestamp", LocalDateTime.now(),
+                        "status", 500,
                         "error", "Server error",
                         "message", "Wystąpił nieoczekiwany błąd serwera"
-                ));
+                )
+        );
     }
 
     private boolean isDatabaseException(Throwable ex) {
@@ -128,7 +117,8 @@ public class GlobalExceptionHandler {
                     || className.contains("JPA")
                     || (message != null && message.contains("Could not open JPA EntityManager"))
                     || (message != null && message.contains("Connection refused"))
-                    || (message != null && message.contains("The connection attempt failed"))) {
+                    || (message != null && message.contains("The connection attempt failed"))
+                    || (message != null && message.contains("Connection is not available"))) {
                 return true;
             }
 
