@@ -1,12 +1,17 @@
 package org.example.kurki.security.exception;
 
+import jakarta.persistence.PersistenceException;
+import org.hibernate.exception.JDBCConnectionException;
+import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authorization.AuthorizationDeniedException;
+import org.springframework.transaction.CannotCreateTransactionException;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.nio.file.AccessDeniedException;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
@@ -62,8 +67,16 @@ public class GlobalExceptionHandler {
                 .body(Map.of("error", "Server error", "message", ex.getMessage()));
     }
 
-    @ExceptionHandler(DatabaseUnavailableException.class)
-    public ResponseEntity<?> handleDatabaseUnavailable(DatabaseUnavailableException ex) {
+    @ExceptionHandler({
+            CannotCreateTransactionException.class,
+            JDBCConnectionException.class,
+            DataAccessException.class,
+            PersistenceException.class,
+            SQLException.class
+    })
+    public ResponseEntity<?> handleDatabaseErrors(Exception ex) {
+        ex.printStackTrace();
+
         return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(
                 Map.of(
                         "timestamp", LocalDateTime.now(),
