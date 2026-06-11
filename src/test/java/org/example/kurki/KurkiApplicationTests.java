@@ -10,6 +10,6 @@ class KurkiApplicationTests {
 
     @Test
     void contextLoads() {
-    }///
+    }
 
 }
