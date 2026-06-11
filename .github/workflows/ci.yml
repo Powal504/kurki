@@ -12,6 +12,9 @@ permissions:
 
 env:
   IMAGE_NAME: kurki-backend
+  RESOURCE_GROUP: kurki-rg
+  DEV_CONTAINER_APP: kurki-backend-app-dev
+  PROD_CONTAINER_APP: kurki-backend-app
 
 jobs:
   test:
@@ -100,23 +103,32 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Check Azure account
+      - name: Configure integration ingress
         run: |
-          az account show
-          az group show --name kurki-rg
-
-      - name: Check integration Container App
-        run: |
-          az containerapp show \
-            --name kurki-backend-app-dev \
-            --resource-group kurki-rg
+          az containerapp ingress update \
+            --name ${{ env.DEV_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --target-port 8080
 
       - name: Deploy backend to integration
         run: |
           az containerapp update \
-            --name kurki-backend-app-dev \
-            --resource-group kurki-rg \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            --name ${{ env.DEV_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --set-env-vars SERVER_PORT=8080 \
+            --min-replicas 1 \
+            --max-replicas 1
+
+      - name: Show integration logs after failure
+        if: failure()
+        run: |
+          az containerapp logs show \
+            --name ${{ env.DEV_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --type console \
+            --tail 200 \
+            --format text || true
 
   deploy-prod:
     name: Deploy to production
@@ -130,9 +142,29 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
+      - name: Configure production ingress
+        run: |
+          az containerapp ingress update \
+            --name ${{ env.PROD_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --target-port 8080
+
       - name: Deploy backend to production
         run: |
           az containerapp update \
-            --name kurki-backend-app \
-            --resource-group kurki-rg \
-            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+            --name ${{ env.PROD_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --set-env-vars SERVER_PORT=8080 \
+            --min-replicas 1 \
+            --max-replicas 1
+
+      - name: Show production logs after failure
+        if: failure()
+        run: |
+          az containerapp logs show \
+            --name ${{ env.PROD_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --type console \
+            --tail 200 \
+            --format text || true
