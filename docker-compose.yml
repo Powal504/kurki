@@ -1,8 +1,8 @@
-version: '3.8'
+version: "3.8"
 
 services:
   db:
-    image: postgres:15-alpine
+    image: postgres:16-alpine
     container_name: kurki_postgres
     restart: always
     environment:
@@ -13,6 +13,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d kurki_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   backend:
     build:
@@ -21,12 +26,15 @@ services:
     restart: on-failure
     ports:
       - "8080:8080"
-    depends_on:
-      - db
     env_file:
       - .env
     environment:
-      - DB_URL=jdbc:postgresql://db:5432/kurki_db
+      DB_URL: jdbc:postgresql://db:5432/kurki_db
+      DB_USERNAME: ${DB_USERNAME}
+      DB_PASSWORD: ${DB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
 
 volumes:
   postgres_data:
