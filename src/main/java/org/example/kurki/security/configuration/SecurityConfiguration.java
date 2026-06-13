@@ -67,7 +67,13 @@ public class SecurityConfiguration {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(List.of("http://localhost:5173", "http://localhost:8080", "https://kurki-frontend-app.happywave-0059b994.polandcentral.azurecontainerapps.io"));
+        configuration.setAllowedOrigins(List.of(
+                "http://localhost:5173",
+                "http://localhost:8080",
+                "https://kurki-frontend-app.happywave-0059b994.polandcentral.azurecontainerapps.io",
+                "https://*.kurki-front.pages.dev",
+                "https://kurki-front.pages.dev"
+        ));
         configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         configuration.setAllowedHeaders(List.of("Authorization", "Cache-Control", "Content-Type"));
         configuration.setAllowCredentials(true);
