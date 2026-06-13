@@ -1,83 +1,225 @@
-name: Kurki CI
+name: Kurki Backend CI/CD
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "dev", "main" ]
+
   pull_request:
-    branches: [ "main" ]
+    branches: [ "dev", "main" ]
+
+  release:
+    types: [ published ]
+
+  workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+
+env:
+  IMAGE_NAME: kurki-backend
+  RESOURCE_GROUP: kurki-rg
+  DEV_CONTAINER_APP: kurki-backend-app-dev
+  PROD_CONTAINER_APP: kurki-backend-app
+  APP_PORT: 8080
+  HEALTH_PATH: /actuator/health
 
 jobs:
   test:
+    name: Run backend tests
     runs-on: ubuntu-latest
 
     services:
       postgres:
         image: postgres:16
         env:
-          POSTGRES_DB: kurki
+          POSTGRES_DB: kurki_test
           POSTGRES_USER: postgres
           POSTGRES_PASSWORD: postgres
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U postgres -d kurki_test"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
 
     steps:
-      - name: Pobranie kodu
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Konfiguracja Java 21
+      - name: Setup Java 21
         uses: actions/setup-java@v4
         with:
-          java-version: '21'
-          distribution: 'temurin'
+          java-version: "21"
+          distribution: "temurin"
           cache: maven
 
-      - name: Nadanie uprawnień dla Maven Wrapper
+      - name: Make Maven Wrapper executable
         run: chmod +x mvnw
 
-      - name: Uruchomienie testów Mavenem
-        id: run-tests
-        run: ./mvnw test -B
+      - name: Run Maven tests
+        env:
+          SPRING_PROFILES_ACTIVE: test
+          DB_URL: jdbc:postgresql://localhost:5432/kurki_test
+          DB_USERNAME: postgres
+          DB_PASSWORD: postgres
+          GEMINI_API_KEY: dummy-key
+          GEMINI_API_URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent
+        run: ./mvnw clean test -B
 
-      - name: Automatyczne cofnięcie (Revert) zepsutego pusha
-        if: ${{ failure() && github.event_name == 'push' }}
+      - name: Show test reports after failure
+        if: failure()
         run: |
-          git config --global user.name "GitHub Actions Bot"
-          git config --global user.email "actions@github.com"        
-          echo "Testy zawiodły na gałęzi głównej! Tworzę revert commita..."
-          
-          git revert --no-edit HEAD 
-          
-          git push origin main
+          echo "=== Surefire reports ==="
+          ls -la target/surefire-reports || true
+          cat target/surefire-reports/*.txt || true
 
-      - name: Logowanie do Azure Container Registry
+  build-and-push:
+    name: Build and push Docker image
+    needs: test
+    if: github.event_name == 'push' || github.event_name == 'release'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'release' && github.event.release.tag_name || github.ref }}
+
+      - name: Set Docker image tag
+        id: image_meta
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Login to Azure Container Registry
         uses: azure/docker-login@v1
         with:
           login-server: ${{ secrets.ACR_LOGIN_SERVER }}
           username: ${{ secrets.ACR_USERNAME }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      - name: Budowanie i wysyłanie obrazu Docker
+      - name: Build and push Docker image
         run: |
-          docker build -t ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:${{ github.sha }} -t ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:latest .
-          docker push ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend --all-tags
-      - name: Logowanie do Azure za pomocą CLI
+          docker build \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            -t ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.image_meta.outputs.tag }} \
+            .
+
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }}
+          docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.image_meta.outputs.tag }}
+
+  deploy-dev:
+    name: Deploy to integration
+    needs: build-and-push
+    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    runs-on: ubuntu-latest
+    environment: integration
+
+    steps:
+      - name: Azure login
         uses: azure/login@v1
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Aktualizacja Azure Container App nowym obrazem
+      - name: Configure integration ingress
+        run: |
+          az containerapp ingress update \
+            --name ${{ env.DEV_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --target-port ${{ env.APP_PORT }}
+
+      - name: Deploy backend to integration
         run: |
           az containerapp update \
-              --name kurki-backend-app \
-              --resource-group kurki-rg \
-              --image ${{ secrets.ACR_LOGIN_SERVER }}/kurki-backend:${{ github.sha }}           
+            --name ${{ env.DEV_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.sha }} \
+            --set-env-vars SERVER_PORT=${{ env.APP_PORT }} \
+            --min-replicas 1 \
+            --max-replicas 1
+
+      - name: Smoke test integration
+        run: |
+          FQDN=$(az containerapp show \
+            --name ${{ env.DEV_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            -o tsv)
+
+          echo "Testing: https://$FQDN${{ env.HEALTH_PATH }}"
+
+          curl -fsS \
+            --retry 10 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            "https://$FQDN${{ env.HEALTH_PATH }}"
+
+      - name: Show integration logs after failure
+        if: failure()
+        run: |
+          az containerapp logs show \
+            --name ${{ env.DEV_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --type console \
+            --tail 200 \
+            --format text || true
+
+  deploy-prod:
+    name: Deploy to production
+    needs: build-and-push
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Azure login
+        uses: azure/login@v1
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Configure production ingress
+        run: |
+          az containerapp ingress update \
+            --name ${{ env.PROD_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --target-port ${{ env.APP_PORT }}
+
+      - name: Deploy backend release to production
+        run: |
+          az containerapp update \
+            --name ${{ env.PROD_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --image ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ github.event.release.tag_name }} \
+            --set-env-vars SERVER_PORT=${{ env.APP_PORT }} \
+            --min-replicas 1 \
+            --max-replicas 1
+
+      - name: Smoke test production
+        run: |
+          FQDN=$(az containerapp show \
+            --name ${{ env.PROD_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --query properties.configuration.ingress.fqdn \
+            -o tsv)
+
+          echo "Testing: https://$FQDN${{ env.HEALTH_PATH }}"
+
+          curl -fsS \
+            --retry 10 \
+            --retry-delay 10 \
+            --retry-all-errors \
+            "https://$FQDN${{ env.HEALTH_PATH }}"
+
+      - name: Show production logs after failure
+        if: failure()
+        run: |
+          az containerapp logs show \
+            --name ${{ env.PROD_CONTAINER_APP }} \
+            --resource-group ${{ env.RESOURCE_GROUP }} \
+            --type console \
+            --tail 200 \
+            --format text || true
