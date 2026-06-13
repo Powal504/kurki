@@ -50,7 +50,9 @@ public class SecurityConfiguration {
                                 "/swagger-resources/**",
                                 "/webjars/**",
                                 "/",
-                                "/auth/**"
+                                "/auth/**",
+                                "/actuator/health",
+                                "/actuator/health/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .anyRequest().authenticated()
