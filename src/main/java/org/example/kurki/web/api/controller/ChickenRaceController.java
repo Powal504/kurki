@@ -31,13 +31,6 @@ public class ChickenRaceController {
         return service.create(dto);
     }
 
-    @PutMapping("/{id}")
-    @PreAuthorize("hasRole('MODERATOR')")
-    public ChickenRaceDto update(@PathVariable Long id,
-                                 @RequestBody ChickenRaceDto dto) {
-        return service.update(id, dto);
-    }
-
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {
