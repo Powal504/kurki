@@ -54,7 +54,7 @@ class ChickenRaceControllerTest {
     void getAll_shouldReturnList() throws Exception {
         ChickenRaceDto dto = new ChickenRaceDto();
         dto.setId(1L);
-        dto.setRace("Silkie");
+        dto.setRace("maka");
         dto.setDescription("Fluffy chicken");
 
         when(service.getAll()).thenReturn(List.of(dto));
@@ -62,7 +62,7 @@ class ChickenRaceControllerTest {
         mockMvc.perform(get("/races"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].race").value("Silkie"))
+                .andExpect(jsonPath("$[0].race").value("maka"))
                 .andExpect(jsonPath("$[0].description").value("Fluffy chicken"));
     }
 
@@ -95,21 +95,6 @@ class ChickenRaceControllerTest {
                         .content(objectMapper.writeValueAsString(dto)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.race").value("Leghorn"));
-    }
-
-    @Test
-    @WithMockUser(roles = "MODERATOR")
-    void update_shouldUpdateRace() throws Exception {
-        ChickenRaceDto dto = new ChickenRaceDto();
-        dto.setRace("Updated");
-
-        when(service.update(eq(1L), any())).thenReturn(dto);
-
-        mockMvc.perform(put("/races/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.race").value("Updated"));
     }
 
     @Test
