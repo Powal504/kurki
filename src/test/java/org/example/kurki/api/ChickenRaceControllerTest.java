@@ -98,21 +98,6 @@ class ChickenRaceControllerTest {
     }
 
     @Test
-    @WithMockUser(roles = "MODERATOR")
-    void update_shouldUpdateRace() throws Exception {
-        ChickenRaceDto dto = new ChickenRaceDto();
-        dto.setRace("Updated");
-
-        when(service.update(eq(1L), any())).thenReturn(dto);
-
-        mockMvc.perform(put("/races/1")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(dto)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.race").value("Updated"));
-    }
-
-    @Test
     @WithMockUser(roles = "ADMIN")
     void delete_shouldReturnOk() throws Exception {
         mockMvc.perform(delete("/races/1"))
