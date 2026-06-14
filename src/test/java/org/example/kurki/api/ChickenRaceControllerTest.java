@@ -59,7 +59,7 @@ class ChickenRaceControllerTest {
 
         when(service.getAll()).thenReturn(List.of(dto));
 
-        mockMvc.perform(get("/races"))
+        mockMvc.perform(get("/races-test"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
                 .andExpect(jsonPath("$[0].race").value("Silkie"))
