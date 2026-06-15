@@ -38,6 +38,11 @@ public class ChickenRaceController {
         return service.update(id, dto);
     }
 
+    @GetMapping("/test")
+    public String hello() {
+        return "działa";
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasRole('ADMIN')")
     public void delete(@PathVariable Long id) {

@@ -54,7 +54,7 @@ class ChickenRaceControllerTest {
     void getAll_shouldReturnList() throws Exception {
         ChickenRaceDto dto = new ChickenRaceDto();
         dto.setId(1L);
-        dto.setRace("Silkie");
+        dto.setRace("maka");
         dto.setDescription("Fluffy chicken");
 
         when(service.getAll()).thenReturn(List.of(dto));
@@ -62,7 +62,7 @@ class ChickenRaceControllerTest {
         mockMvc.perform(get("/races"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").value(1))
-                .andExpect(jsonPath("$[0].race").value("Silkie"))
+                .andExpect(jsonPath("$[0].race").value("maka"))
                 .andExpect(jsonPath("$[0].description").value("Fluffy chicken"));
     }
 
