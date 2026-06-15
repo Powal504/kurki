@@ -2,10 +2,10 @@ name: Kurki Backend CI/CD
 
 on:
   push:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
 
   pull_request:
-    branches: [ "dev", "main" ]
+    branches: [ "main" ]
 
   release:
     types: [ published ]
@@ -113,9 +113,9 @@ jobs:
           docker push ${{ secrets.ACR_LOGIN_SERVER }}/${{ env.IMAGE_NAME }}:${{ steps.image_meta.outputs.tag }}
 
   deploy-dev:
-    name: Deploy to integration
+    name: Deploy to development
     needs: build-and-push
-    if: github.event_name == 'push' && github.ref == 'refs/heads/dev'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment: integration
 
@@ -125,14 +125,14 @@ jobs:
         with:
           creds: ${{ secrets.AZURE_CREDENTIALS }}
 
-      - name: Configure integration ingress
+      - name: Configure development ingress
         run: |
           az containerapp ingress update \
             --name ${{ env.DEV_CONTAINER_APP }} \
             --resource-group ${{ env.RESOURCE_GROUP }} \
             --target-port ${{ env.APP_PORT }}
 
-      - name: Deploy backend to integration
+      - name: Deploy backend to development
         run: |
           az containerapp update \
             --name ${{ env.DEV_CONTAINER_APP }} \
@@ -142,7 +142,7 @@ jobs:
             --min-replicas 1 \
             --max-replicas 1
 
-      - name: Smoke test integration
+      - name: Smoke test development
         run: |
           FQDN=$(az containerapp show \
             --name ${{ env.DEV_CONTAINER_APP }} \
@@ -158,7 +158,7 @@ jobs:
             --retry-all-errors \
             "https://$FQDN${{ env.HEALTH_PATH }}"
 
-      - name: Show integration logs after failure
+      - name: Show development logs after failure
         if: failure()
         run: |
           az containerapp logs show \
