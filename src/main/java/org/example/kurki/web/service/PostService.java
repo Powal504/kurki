@@ -19,5 +19,5 @@ public interface PostService {
     void deleteAny(Integer id);
 
     void ban(Integer id);
-//
+
 }
